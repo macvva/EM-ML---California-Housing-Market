@@ -51,3 +51,59 @@ for name, group in grouped:
 df.to_csv('matched_transactions.csv', index=False)
 
 print(df)
+
+
+
+
+
+
+************
+
+
+import pandas as pd
+
+# Przykładowe dane
+data = {
+    'Deal Number': ['1', '2', '3', '4', '5', '6'],
+    'Matched Deal Number': ['X2', 'X3, 4, X5', 'X1', '5', '4', 2.0],
+    'Folder Short Name': ['OTHER', 'COMMODITY', 'OTHER', 'OTHER', 'COMMODITY', 'OTHER'],
+    # Inne kolumny mogą być dodane tutaj
+}
+
+df = pd.DataFrame(data)
+
+# Funkcja do usuwania prefiksu 'X' i konwersji na string
+def clean_matched_deal_number(x):
+    if isinstance(x, float):
+        return str(int(x))
+    elif isinstance(x, str):
+        return x.replace('X', '')
+    return str(x)
+
+# Konwersja wszystkich wartości na stringi i czyszczenie kolumny 'Matched Deal Number'
+df['Matched Deal Number'] = df['Matched Deal Number'].apply(lambda x: ', '.join([clean_matched_deal_number(i) for i in str(x).split(', ')]))
+
+# Oddzielanie transakcji nie będących w folderze 'COMMODITY'
+non_commodity_deals = df[df['Folder Short Name'] != 'COMMODITY']
+
+# Funkcja do tworzenia nowej struktury DataFrame
+def match_transactions(df, non_commodity_deals):
+    result = []
+    for _, deal in non_commodity_deals.iterrows():
+        result.append(deal.tolist() + [''] * (len(df.columns) + 1 - len(deal)))  # Dodanie wiersza z transakcją
+        matched_deal_numbers = deal['Matched Deal Number'].split(', ')
+        for match in matched_deal_numbers:
+            matched_deals = df[df['Deal Number'] == match.strip()]
+            for _, matched_deal in matched_deals.iterrows():
+                result.append([''] * len(deal) + matched_deal.tolist())  # Dodanie wiersza z dopasowaną transakcją
+        result.append([''] * (len(deal) + len(df.columns)))  # Dodanie pustego wiersza
+    return pd.DataFrame(result, columns=list(df.columns) + [''] * (len(result[0]) - len(df.columns)))
+
+# Tworzenie nowego DataFrame
+matched_df = match_transactions(df, non_commodity_deals)
+
+# Wyświetlanie wyników
+print(matched_df)
+
+# Zapisanie wyników do pliku CSV (opcjonalnie)
+matched_df.to_csv('matched_transactions.csv', index=False)
